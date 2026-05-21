@@ -15,53 +15,103 @@ const io = new Server(server, {
 const rooms = {};
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
 
-  socket.on('joinRoom', (roomId) => {
+  console.log(
+    'User connected:',
+    socket.id
+  );
 
-    if (!rooms[roomId]) {
-      rooms[roomId] = {
-        players: [],
-      };
+  socket.on(
+    'joinRoom',
+    (roomId) => {
+
+      if (!rooms[roomId]) {
+
+        rooms[roomId] = {
+          players: [],
+        };
+
+      }
+
+      const room =
+        rooms[roomId];
+
+      const alreadyJoined =
+        room.players.includes(
+          socket.id
+        );
+
+      if (
+        !alreadyJoined &&
+        room.players.length >= 2
+      ) {
+
+        socket.emit(
+          'roomFull'
+        );
+
+        return;
+
+      }
+
+      if (
+        !alreadyJoined
+      ) {
+
+        room.players.push(
+          socket.id
+        );
+
+      }
+
+      socket.join(
+        roomId
+      );
+
+      let assignedColor =
+        null;
+
+      if (
+        room.players[0]
+        ===
+        socket.id
+      ) {
+
+        assignedColor =
+          'red';
+
+      }
+
+      if (
+        room.players[1]
+        ===
+        socket.id
+      ) {
+
+        assignedColor =
+          'yellow';
+
+      }
+
+      socket.emit(
+        'assignedColor',
+        assignedColor
+      );
+
+      io.to(roomId).emit(
+        'playerCount',
+        room.players.length
+      );
+
+      console.log(
+        socket.id,
+        'joined',
+        roomId,
+        assignedColor
+      );
+
     }
-
-    const room = rooms[roomId];
-
-    if (room.players.length >= 2) {
-      socket.emit('roomFull');
-      return;
-    }
-
-    if (!room.players.includes(socket.id)) {
-      room.players.push(socket.id);
-    }
-
-    socket.join(roomId);
-
-    let assignedColor = null;
-
-    if (room.players[0] === socket.id) {
-      assignedColor = 'red';
-    }
-
-    if (room.players[1] === socket.id) {
-      assignedColor = 'yellow';
-    }
-
-    socket.emit('assignedColor', assignedColor);
-
-    io.to(roomId).emit(
-      'playerCount',
-      room.players.length
-    );
-
-    console.log(
-      socket.id,
-      'joined',
-      roomId,
-      assignedColor
-    );
-  });
+  );
 
   socket.on(
     'makeMove',
@@ -72,7 +122,9 @@ io.on('connection', (socket) => {
       winner,
     }) => {
 
-      socket.to(roomId).emit(
+      socket.to(
+        roomId
+      ).emit(
         'opponentMove',
         {
           board,
@@ -84,43 +136,60 @@ io.on('connection', (socket) => {
     }
   );
 
-  socket.on('disconnect', () => {
+  socket.on(
+    'disconnect',
+    () => {
 
-    console.log(
-      'Disconnected:',
-      socket.id
-    );
-
-    for (const roomId in rooms) {
-
-      const room = rooms[roomId];
-
-      room.players =
-        room.players.filter(
-          id => id !== socket.id
-        );
-
-      io.to(roomId).emit(
-        'playerCount',
-        room.players.length
+      console.log(
+        'Disconnected:',
+        socket.id
       );
 
-      if (
-        room.players.length === 0
+      for (
+        const roomId
+        in rooms
       ) {
-        delete rooms[roomId];
+
+        const room =
+          rooms[roomId];
+
+        room.players =
+          room.players.filter(
+            (id) =>
+              id !==
+              socket.id
+          );
+
+        io.to(roomId).emit(
+          'playerCount',
+          room.players.length
+        );
+
+        if (
+          room.players
+            .length === 0
+        ) {
+
+          delete rooms[
+            roomId
+          ];
+
+        }
+
       }
 
     }
-
-  });
-
-});
-
-server.listen(3001, () => {
-
-  console.log(
-    'Socket.io server running on http://localhost:3001'
   );
 
 });
+
+server.listen(
+  3001,
+  () => {
+
+    console.log(
+      'Socket.io server running on http://localhost:3001'
+    );
+
+  }
+);

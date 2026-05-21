@@ -1,207 +1,525 @@
-import React, { useEffect, useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:3001');
-const ROOM_ID = 'test-room';
+const socket =
+  io('http://localhost:3001');
 
-export default function Connect4Board({ onRestart }) {
+const ROOM_ID =
+  'test-room';
+
+export default function Connect4Board(
+  { onRestart }
+) {
+
   const rows = 6;
   const columns = 7;
 
-  const [board, setBoard] = useState(
-    Array.from({ length: rows }, () => Array(columns).fill(null))
-  );
+  const [board, setBoard] =
+    useState(
+      Array.from(
+        { length: rows },
+        () =>
+          Array(columns)
+            .fill(null)
+      )
+    );
 
-  const [currentPlayer, setCurrentPlayer] = useState('red');
-  const [winner, setWinner] = useState(null);
-  const [playerCount, setPlayerCount] = useState(0);
+  const [
+    currentPlayer,
+    setCurrentPlayer,
+  ] = useState('red');
+
+  const [
+    myColor,
+    setMyColor,
+  ] = useState(null);
+
+  const [
+    winner,
+    setWinner,
+  ] = useState(null);
+
+  const [
+    playerCount,
+    setPlayerCount,
+  ] = useState(0);
 
   useEffect(() => {
-    socket.emit('joinRoom', ROOM_ID);
 
-    socket.on('connect', () => {
-      console.log('Connected to server:', socket.id);
-    });
+    function handleConnect() {
 
-    socket.on('playerCount', (count) => {
-      console.log('Player count:', count);
-      setPlayerCount(count);
-    });
+      console.log(
+        'Connected:',
+        socket.id
+      );
 
-    socket.on('opponentMove', ({ board, currentPlayer, winner }) => {
-      setBoard(board);
-      setCurrentPlayer(currentPlayer);
-      setWinner(winner);
-    });
+      socket.emit(
+        'joinRoom',
+        ROOM_ID
+      );
+
+    }
+
+    function handleAssignedColor(
+      color
+    ) {
+
+      console.log(
+        'Assigned:',
+        color
+      );
+
+      setMyColor(
+        color
+      );
+
+    }
+
+    function handlePlayerCount(
+      count
+    ) {
+
+      setPlayerCount(
+        count
+      );
+
+    }
+
+    function handleRoomFull() {
+
+      alert(
+        'Room full'
+      );
+
+    }
+
+    function handleOpponentMove({
+      board,
+      currentPlayer,
+      winner,
+    }) {
+
+      setBoard(
+        board
+      );
+
+      setCurrentPlayer(
+        currentPlayer
+      );
+
+      setWinner(
+        winner
+      );
+
+    }
+
+    socket.on(
+      'connect',
+      handleConnect
+    );
+
+    socket.on(
+      'assignedColor',
+      handleAssignedColor
+    );
+
+    socket.on(
+      'playerCount',
+      handlePlayerCount
+    );
+
+    socket.on(
+      'roomFull',
+      handleRoomFull
+    );
+
+    socket.on(
+      'opponentMove',
+      handleOpponentMove
+    );
+
+    if (
+      socket.connected
+    ) {
+
+      socket.emit(
+        'joinRoom',
+        ROOM_ID
+      );
+
+    }
 
     return () => {
-      socket.off('connect');
-      socket.off('playerCount');
-      socket.off('opponentMove');
+
+      socket.off(
+        'connect',
+        handleConnect
+      );
+
+      socket.off(
+        'assignedColor',
+        handleAssignedColor
+      );
+
+      socket.off(
+        'playerCount',
+        handlePlayerCount
+      );
+
+      socket.off(
+        'roomFull',
+        handleRoomFull
+      );
+
+      socket.off(
+        'opponentMove',
+        handleOpponentMove
+      );
+
     };
+
   }, []);
 
-  const checkWinner = (boardToCheck) => {
-    const directions = [
-      [0, 1],
-      [1, 0],
-      [1, 1],
-      [1, -1],
+  function checkWinner(
+    boardCheck
+  ) {
+
+    const dirs = [
+
+      [0,1],
+      [1,0],
+      [1,1],
+      [1,-1],
+
     ];
 
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < columns; col++) {
-        const player = boardToCheck[row][col];
-        if (!player) continue;
+    for (
+      let r=0;
+      r<rows;
+      r++
+    ) {
 
-        for (const [dx, dy] of directions) {
-          let count = 1;
+      for (
+        let c=0;
+        c<columns;
+        c++
+      ) {
 
-          for (let step = 1; step < 4; step++) {
-            const newRow = row + dx * step;
-            const newCol = col + dy * step;
+        const player =
+          boardCheck[r][c];
+
+        if (!player)
+          continue;
+
+        for (
+          const [dx,dy]
+          of dirs
+        ) {
+
+          let count=1;
+
+          for (
+            let step=1;
+            step<4;
+            step++
+          ) {
+
+            const nr =
+              r +
+              dx *
+              step;
+
+            const nc =
+              c +
+              dy *
+              step;
 
             if (
-              newRow < 0 ||
-              newRow >= rows ||
-              newCol < 0 ||
-              newCol >= columns ||
-              boardToCheck[newRow][newCol] !== player
+
+              nr<0 ||
+              nr>=rows ||
+              nc<0 ||
+              nc>=columns ||
+
+              boardCheck
+              [nr][nc]
+              !== player
+
             ) {
+
               break;
+
             }
 
             count++;
+
           }
 
-          if (count === 4) return player;
+          if (
+            count===4
+          ) {
+
+            return player;
+
+          }
+
         }
+
       }
+
     }
 
     return null;
-  };
 
-  const handleClick = (colIndex) => {
-    if (winner) return;
+  }
 
-    for (let row = rows - 1; row >= 0; row--) {
-      if (!board[row][colIndex]) {
-        const updatedBoard = board.map((boardRow) => [...boardRow]);
-        updatedBoard[row][colIndex] = currentPlayer;
+  function handleClick(
+    colIndex
+  ) {
 
-        const foundWinner = checkWinner(updatedBoard);
-        const nextPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
+    if (
+      winner
+    ) return;
 
-        setBoard(updatedBoard);
-        setWinner(foundWinner);
-        setCurrentPlayer(foundWinner ? currentPlayer : nextPlayer);
+    if (
 
-        socket.emit('makeMove', {
-          roomId: ROOM_ID,
-          board: updatedBoard,
-          currentPlayer: foundWinner ? currentPlayer : nextPlayer,
-          winner: foundWinner,
-        });
+      myColor !==
+      currentPlayer
+
+    ) return;
+
+    for (
+
+      let row=
+      rows-1;
+
+      row>=0;
+
+      row--
+
+    ) {
+
+      if (
+
+        !board[row]
+        [colIndex]
+
+      ) {
+
+        const updated=
+          board.map(
+            r=>[...r]
+          );
+
+        updated
+        [row]
+        [colIndex]
+          =
+          currentPlayer;
+
+        const foundWinner=
+          checkWinner(
+            updated
+          );
+
+        const nextPlayer=
+
+          currentPlayer
+          ===
+          'red'
+
+          ?
+
+          'yellow'
+
+          :
+
+          'red';
+
+        setBoard(
+          updated
+        );
+
+        setWinner(
+          foundWinner
+        );
+
+        setCurrentPlayer(
+
+          foundWinner
+
+          ?
+
+          currentPlayer
+
+          :
+
+          nextPlayer
+
+        );
+
+        socket.emit(
+          'makeMove',
+          {
+
+            roomId:
+              ROOM_ID,
+
+            board:
+              updated,
+
+            currentPlayer:
+
+              foundWinner
+
+              ?
+
+              currentPlayer
+
+              :
+
+              nextPlayer,
+
+            winner:
+              foundWinner,
+
+          }
+        );
 
         break;
+
       }
+
     }
-  };
+
+  }
 
   return (
+
     <>
-      <div style={styles.status}>
-        Players in room: {playerCount}
+
+      <div>
+
+        Players:
+        {' '}
+        {playerCount}
+
+      </div>
+
+      <div>
+
+        You:
+        {' '}
+        {myColor ??
+        'Waiting'}
+
+      </div>
+
+      <div>
+
+        Turn:
+        {' '}
+        {currentPlayer}
+
       </div>
 
       {winner && (
-        <div style={styles.winnerText}>
-          {winner.toUpperCase()} wins!
-          <button onClick={onRestart} style={styles.playAgainButton}>
-            Play Again
-          </button>
-        </div>
+
+        <h2>
+
+          {winner}
+          {' '}
+          wins
+
+        </h2>
+
       )}
 
-      {!winner && (
-        <div style={styles.turnText}>
-          {currentPlayer === 'red' ? 'Red' : 'Yellow'}&apos;s Turn
-        </div>
-      )}
+      <div
+        style={{
+          display:
+            'inline-block',
+        }}
+      >
 
-      <div style={styles.board}>
-        {board.map((row, rowIndex) => (
-          <div key={rowIndex} style={styles.row}>
-            {row.map((cell, colIndex) => (
-              <button
-                key={colIndex}
-                type="button"
-                onClick={() => handleClick(colIndex)}
-                style={{
-                  ...styles.cell,
-                  backgroundColor:
-                    cell === 'red'
-                      ? 'red'
-                      : cell === 'yellow'
-                        ? 'gold'
-                        : '#0f4c81',
-                }}
-                aria-label={`Column ${colIndex + 1}`}
-              />
-            ))}
-          </div>
-        ))}
+        {board.map(
+          (row,r)=>(
+
+            <div
+              key={r}
+              style={{
+                display:
+                  'flex',
+              }}
+            >
+
+              {row.map(
+                (cell,c)=>(
+
+                  <button
+
+                    key={c}
+
+                    onClick={()=>
+                      handleClick(
+                        c
+                      )
+                    }
+
+                    style={{
+
+                      width:70,
+                      height:70,
+
+                      margin:4,
+
+                      borderRadius:
+                        '50%',
+
+                      background:
+
+                        cell
+                        ===
+                        'red'
+
+                        ?
+
+                        'red'
+
+                        :
+
+                        cell
+                        ===
+                        'yellow'
+
+                        ?
+
+                        'gold'
+
+                        :
+
+                        '#0f4c81',
+
+                    }}
+
+                  />
+
+                )
+              )}
+
+            </div>
+
+          )
+        )}
+
       </div>
-    </>
-  );
-}
 
-const styles = {
-  status: {
-    color: 'white',
-    fontSize: '1rem',
-    marginBottom: '10px',
-  },
-  winnerText: {
-    color: 'white',
-    fontSize: '1.5rem',
-    marginBottom: '20px',
-  },
-  turnText: {
-    color: 'white',
-    fontSize: '1.2rem',
-    marginBottom: '10px',
-  },
-  playAgainButton: {
-    marginLeft: '15px',
-    padding: '8px 16px',
-    fontSize: '1rem',
-    backgroundColor: '#f39c12',
-    color: '#000',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
-  board: {
-    backgroundColor: '#0f4c81',
-    padding: '15px',
-    borderRadius: '20px',
-    boxShadow: '0 0 30px rgba(0,0,0,0.6)',
-    display: 'inline-block',
-    marginTop: '20px',
-  },
-  row: {
-    display: 'flex',
-  },
-  cell: {
-    width: '70px',
-    height: '70px',
-    margin: '5px',
-    borderRadius: '50%',
-    border: 'none',
-    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.7)',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s ease',
-  },
-};
+    </>
+
+  );
+
+}

@@ -18,23 +18,48 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   socket.on('joinRoom', (roomId) => {
-    socket.join(roomId);
-
-    console.log(
-      `User ${socket.id} joined room ${roomId}`
-    );
 
     if (!rooms[roomId]) {
-      rooms[roomId] = [];
+      rooms[roomId] = {
+        players: [],
+      };
     }
 
-    if (!rooms[roomId].includes(socket.id)) {
-      rooms[roomId].push(socket.id);
+    const room = rooms[roomId];
+
+    if (room.players.length >= 2) {
+      socket.emit('roomFull');
+      return;
     }
+
+    if (!room.players.includes(socket.id)) {
+      room.players.push(socket.id);
+    }
+
+    socket.join(roomId);
+
+    let assignedColor = null;
+
+    if (room.players[0] === socket.id) {
+      assignedColor = 'red';
+    }
+
+    if (room.players[1] === socket.id) {
+      assignedColor = 'yellow';
+    }
+
+    socket.emit('assignedColor', assignedColor);
 
     io.to(roomId).emit(
       'playerCount',
-      rooms[roomId].length
+      room.players.length
+    );
+
+    console.log(
+      socket.id,
+      'joined',
+      roomId,
+      assignedColor
     );
   });
 
@@ -46,6 +71,7 @@ io.on('connection', (socket) => {
       currentPlayer,
       winner,
     }) => {
+
       socket.to(roomId).emit(
         'opponentMove',
         {
@@ -54,35 +80,47 @@ io.on('connection', (socket) => {
           winner,
         }
       );
+
     }
   );
 
   socket.on('disconnect', () => {
+
     console.log(
-      'User disconnected:',
+      'Disconnected:',
       socket.id
     );
 
     for (const roomId in rooms) {
-      rooms[roomId] =
-        rooms[roomId].filter(
-          (id) => id !== socket.id
+
+      const room = rooms[roomId];
+
+      room.players =
+        room.players.filter(
+          id => id !== socket.id
         );
 
       io.to(roomId).emit(
         'playerCount',
-        rooms[roomId].length
+        room.players.length
       );
 
-      if (rooms[roomId].length === 0) {
+      if (
+        room.players.length === 0
+      ) {
         delete rooms[roomId];
       }
+
     }
+
   });
+
 });
 
 server.listen(3001, () => {
+
   console.log(
     'Socket.io server running on http://localhost:3001'
   );
+
 });

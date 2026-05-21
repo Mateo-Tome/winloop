@@ -49,9 +49,7 @@ export default function Connect4Board(
   ] = useState(0);
 
   useEffect(() => {
-
     function handleConnect() {
-
       console.log(
         'Connected:',
         socket.id
@@ -61,13 +59,11 @@ export default function Connect4Board(
         'joinRoom',
         ROOM_ID
       );
-
     }
 
     function handleAssignedColor(
       color
     ) {
-
       console.log(
         'Assigned:',
         color
@@ -76,25 +72,20 @@ export default function Connect4Board(
       setMyColor(
         color
       );
-
     }
 
     function handlePlayerCount(
       count
     ) {
-
       setPlayerCount(
         count
       );
-
     }
 
     function handleRoomFull() {
-
       alert(
         'Room full'
       );
-
     }
 
     function handleOpponentMove({
@@ -102,7 +93,6 @@ export default function Connect4Board(
       currentPlayer,
       winner,
     }) {
-
       setBoard(
         board
       );
@@ -114,7 +104,6 @@ export default function Connect4Board(
       setWinner(
         winner
       );
-
     }
 
     socket.on(
@@ -145,16 +134,13 @@ export default function Connect4Board(
     if (
       socket.connected
     ) {
-
       socket.emit(
         'joinRoom',
         ROOM_ID
       );
-
     }
 
     return () => {
-
       socket.off(
         'connect',
         handleConnect
@@ -179,36 +165,29 @@ export default function Connect4Board(
         'opponentMove',
         handleOpponentMove
       );
-
     };
-
   }, []);
 
   function checkWinner(
     boardCheck
   ) {
-
     const dirs = [
-
-      [0,1],
-      [1,0],
-      [1,1],
-      [1,-1],
-
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [1, -1],
     ];
 
     for (
-      let r=0;
-      r<rows;
+      let r = 0;
+      r < rows;
       r++
     ) {
-
       for (
-        let c=0;
-        c<columns;
+        let c = 0;
+        c < columns;
         c++
       ) {
-
         const player =
           boardCheck[r][c];
 
@@ -216,18 +195,16 @@ export default function Connect4Board(
           continue;
 
         for (
-          const [dx,dy]
+          const [dx, dy]
           of dirs
         ) {
-
-          let count=1;
+          let count = 1;
 
           for (
-            let step=1;
-            step<4;
+            let step = 1;
+            step < 4;
             step++
           ) {
-
             const nr =
               r +
               dx *
@@ -239,106 +216,71 @@ export default function Connect4Board(
               step;
 
             if (
-
-              nr<0 ||
-              nr>=rows ||
-              nc<0 ||
-              nc>=columns ||
-
-              boardCheck
-              [nr][nc]
-              !== player
-
+              nr < 0 ||
+              nr >= rows ||
+              nc < 0 ||
+              nc >= columns ||
+              boardCheck[nr][nc] !== player
             ) {
-
               break;
-
             }
 
             count++;
-
           }
 
           if (
-            count===4
+            count === 4
           ) {
-
             return player;
-
           }
-
         }
-
       }
-
     }
 
     return null;
-
   }
 
   function handleClick(
     colIndex
   ) {
-
     if (
       winner
     ) return;
 
     if (
+      playerCount < 2
+    ) return;
 
+    if (
       myColor !==
       currentPlayer
-
     ) return;
 
     for (
-
-      let row=
-      rows-1;
-
-      row>=0;
-
+      let row = rows - 1;
+      row >= 0;
       row--
-
     ) {
-
       if (
-
-        !board[row]
-        [colIndex]
-
+        !board[row][colIndex]
       ) {
-
-        const updated=
+        const updated =
           board.map(
-            r=>[...r]
+            r => [...r]
           );
 
-        updated
-        [row]
-        [colIndex]
-          =
+        updated[row][colIndex] =
           currentPlayer;
 
-        const foundWinner=
+        const foundWinner =
           checkWinner(
             updated
           );
 
-        const nextPlayer=
-
-          currentPlayer
-          ===
-          'red'
-
-          ?
-
-          'yellow'
-
-          :
-
-          'red';
+        const nextPlayer =
+          currentPlayer === 'red'
+            ? 'yellow'
+            : 'red';
 
         setBoard(
           updated
@@ -349,23 +291,14 @@ export default function Connect4Board(
         );
 
         setCurrentPlayer(
-
           foundWinner
-
-          ?
-
-          currentPlayer
-
-          :
-
-          nextPlayer
-
+            ? currentPlayer
+            : nextPlayer
         );
 
         socket.emit(
           'makeMove',
           {
-
             roomId:
               ROOM_ID,
 
@@ -373,153 +306,99 @@ export default function Connect4Board(
               updated,
 
             currentPlayer:
-
               foundWinner
-
-              ?
-
-              currentPlayer
-
-              :
-
-              nextPlayer,
+                ? currentPlayer
+                : nextPlayer,
 
             winner:
               foundWinner,
-
           }
         );
 
         break;
-
       }
-
     }
-
   }
 
   return (
-
     <>
-
       <div>
-
-        Players:
-        {' '}
-        {playerCount}
-
+        Players: {playerCount}
       </div>
 
       <div>
-
-        You:
-        {' '}
-        {myColor ??
-        'Waiting'}
-
+        You: {myColor ?? 'Waiting'}
       </div>
 
       <div>
-
-        Turn:
-        {' '}
-        {currentPlayer}
-
+        Turn: {currentPlayer}
       </div>
 
-      {winner && (
-
-        <h2>
-
-          {winner}
-          {' '}
-          wins
-
-        </h2>
-
+      {playerCount < 2 && (
+        <div
+          style={{
+            marginTop: 20,
+            fontSize: 20,
+          }}
+        >
+          Waiting for another player to join...
+        </div>
       )}
 
-      <div
-        style={{
-          display:
-            'inline-block',
-        }}
-      >
+      {winner && (
+        <h2>
+          {winner} wins
+        </h2>
+      )}
 
-        {board.map(
-          (row,r)=>(
-
-            <div
-              key={r}
-              style={{
-                display:
-                  'flex',
-              }}
-            >
-
-              {row.map(
-                (cell,c)=>(
-
-                  <button
-
-                    key={c}
-
-                    onClick={()=>
-                      handleClick(
-                        c
-                      )
-                    }
-
-                    style={{
-
-                      width:70,
-                      height:70,
-
-                      margin:4,
-
-                      borderRadius:
-                        '50%',
-
-                      background:
-
-                        cell
-                        ===
-                        'red'
-
-                        ?
-
-                        'red'
-
-                        :
-
-                        cell
-                        ===
-                        'yellow'
-
-                        ?
-
-                        'gold'
-
-                        :
-
-                        '#0f4c81',
-
-                    }}
-
-                  />
-
-                )
-              )}
-
-            </div>
-
-          )
-        )}
-
-      </div>
-
+      {playerCount === 2 && (
+        <div
+          style={{
+            display:
+              'inline-block',
+            marginTop:
+              20,
+          }}
+        >
+          {board.map(
+            (row, r) => (
+              <div
+                key={r}
+                style={{
+                  display:
+                    'flex',
+                }}
+              >
+                {row.map(
+                  (cell, c) => (
+                    <button
+                      key={c}
+                      onClick={() =>
+                        handleClick(
+                          c
+                        )
+                      }
+                      style={{
+                        width: 70,
+                        height: 70,
+                        margin: 4,
+                        borderRadius:
+                          '50%',
+                        background:
+                          cell === 'red'
+                            ? 'red'
+                            : cell === 'yellow'
+                              ? 'gold'
+                              : '#0f4c81',
+                      }}
+                    />
+                  )
+                )}
+              </div>
+            )
+          )}
+        </div>
+      )}
     </>
-
   );
-
 }
